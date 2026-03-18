@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Baseball Élite Rive-Sud</title>
+<style>
+/* ========== RESET & BASE ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #1a1a2e; font-size: 14px; }
+
+/* ========== HEADER ========== */
+.header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #fff; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+.header-left { display: flex; align-items: center; gap: 16px; }
+.header h1 { font-size: 20px; font-weight: 700; letter-spacing: .5px; }
+.header .org-badge { background: #e94560; padding: 4px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.header-right label { font-size: 13px; opacity: .8; }
+.year-select, .org-select { background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.3); border-radius: 6px; padding: 6px 12px; font-size: 14px; cursor: pointer; }
+.year-select option, .org-select option { background: #1a1a2e; color: #fff; }
+.auth-status { font-size: 12px; opacity: .6; }
+
+/* ========== NAV ========== */
+.nav { background: #fff; border-bottom: 1px solid #e0e0e0; padding: 0 24px; display: flex; gap: 0; overflow-x: auto; }
+.nav-tab { padding: 12px 18px; font-size: 13px; font-weight: 500; color: #666; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; transition: all .15s; }
+.nav-tab:hover { color: #1a1a2e; background: #f8f9fa; }
+.nav-tab.active { color: #e94560; border-bottom-color: #e94560; font-weight: 600; }
+
+/* ========== MAIN ========== */
+.main { padding: 24px; max-width: 1400px; margin: 0 auto; }
+.view { display: none; }
+.view.active { display: block; }
+.view-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #1a1a2e; }
+
+/* ========== KPI CARDS ========== */
+.kpi-row { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+.kpi-card { background: #fff; border-radius: 10px; padding: 16px 20px; flex: 1; min-width: 160px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+.kpi-card .kpi-value { font-size: 28px; font-weight: 700; color: #1a1a2e; }
+.kpi-card .kpi-label { font-size: 12px; color: #888; margin-top: 4px; text-transform: uppercase; letter-spacing: .5px; }
+.kpi-card.positive .kpi-value { color: #27ae60; }
+.kpi-card.negative .kpi-value { color: #e74c3c; }
+.kpi-card.neutral .kpi-value { color: #3498db; }
+
+/* ========== TABLES ========== */
+.table-container { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.08); overflow: hidden; }
+table { width: 100%; border-collapse: collapse; }
+thead th { background: #f8f9fa; padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: .5px; border-bottom: 2px solid #e0e0e0; position: sticky; top: 0; }
+thead th.num { text-align: right; }
+tbody td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+tbody td.num { text-align: right; font-variant-numeric: tabular-nums; }
+tbody tr:hover { background: #fafbfc; }
+
+/* Drill-down levels */
+tr.level-1 { cursor: pointer; font-weight: 600; }
+tr.level-1 td:first-child::before { content: '▶ '; font-size: 10px; color: #999; transition: transform .15s; }
+tr.level-1.expanded td:first-child::before { content: '▼ '; }
+tr.level-2 { display: none; background: #fafbfc; }
+tr.level-2 td:first-child { padding-left: 36px; }
+tr.level-2 td:first-child::before { content: '▶ '; font-size: 10px; color: #bbb; }
+tr.level-2.expanded td:first-child::before { content: '▼ '; }
+tr.level-2 { cursor: pointer; }
+tr.level-3 { display: none; background: #f5f6f8; }
+tr.level-3 td:first-child { padding-left: 58px; }
+tr.visible { display: table-row; }
+
+/* Delta styling */
+.delta-pos { color: #27ae60; font-weight: 600; }
+.delta-neg { color: #e74c3c; font-weight: 600; }
+.delta-zero { color: #999; }
+
+/* Status badges */
+.badge-ok { color: #27ae60; font-weight: 700; }
+.badge-no { color: #e74c3c; font-weight: 700; }
+.badge-b { background: #3498db; color: #fff; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
+
+/* ========== MATRIX ========== */
+.matrix-section { margin-bottom: 32px; }
+.matrix-section h3 { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
+table.matrix th, table.matrix td { text-align: center; padding: 8px 12px; min-width: 60px; }
+table.matrix td.row-header { text-align: left; font-weight: 500; }
+table.matrix td.num { font-weight: 600; }
+table.matrix tr.total-row { background: #f0f2f5; font-weight: 700; }
+table.matrix tr.total-row td { border-top: 2px solid #ccc; }
+
+/* ========== LOADING / ERROR ========== */
+.loading-overlay { position: fixed; inset: 0; background: rgba(240,242,245,.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+.loading-overlay.hidden { display: none; }
+.loading-spinner { width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top-color: #e94560; border-radius: 50%; animation: spin .8s linear infinite; margin-bottom: 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 15px; color: #666; }
+.loading-detail { font-size: 12px; color: #999; margin-top: 6px; }
+.loading { text-align: center; padding: 60px; color: #999; font-size: 16px; }
+.error-msg { background: #ffeaea; color: #c0392b; padding: 16px; border-radius: 8px; margin-bottom: 16px; }
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+  .header { flex-direction: column; gap: 12px; align-items: flex-start; }
+  .nav { padding: 0 12px; }
+  .nav-tab { padding: 10px 12px; font-size: 12px; }
+  .main { padding: 16px; }
+  .kpi-row { flex-direction: column; }
+}
+</style>
+<!-- CDN Libraries -->
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<!-- ========== LOADING OVERLAY ========== -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loadingText">Chargement...</div>
+  <div class="loading-detail" id="loadingDetail"></div>
+</div>
+
+<!-- ========== HEADER ========== -->
+<div class="header">
+  <div class="header-left">
+    <h1>Baseball Élite Rive-Sud</h1>
+    <span class="org-badge" id="orgBadge">Cardinals</span>
+  </div>
+  <div class="header-right">
+    <label>Organisation :</label>
+    <select class="org-select" id="orgSelect">
+      <option value="cardinals">Cardinals</option>
+      <option value="carouges">Carouges</option>
+    </select>
+    <label>Saison :</label>
+    <select class="year-select" id="yearSelect"></select>
+    <button id="btnLogin" style="display:none; background:#e94560; color:#fff; border:none; border-radius:6px; padding:6px 14px; font-size:13px; cursor:pointer; font-weight:600;">Connexion M365</button>
+    <span class="auth-status" id="authStatus">Mode démo (données mock)</span>
+  </div>
+</div>
+
+<!-- ========== NAV ========== -->
+<div class="nav" id="navBar"></div>
+
+<!-- ========== MAIN ========== -->
+<div class="main">
+  <div class="view" id="view-camp-categorie"></div>
+  <div class="view" id="view-camp-association"></div>
+  <div class="view" id="view-precamp-b"></div>
+  <div class="view" id="view-selection-categorie"></div>
+  <div class="view" id="view-selection-association"></div>
+  <div class="view" id="view-validation-n1"></div>
+  <div class="view" id="view-matrices"></div>
+</div>
+
+<script>
+// ================================================================
+//  CONFIGURATION
+// ================================================================
+const CONFIG = {
+  // À remplir quand l'App Registration sera créée
+  msalClientId: '65df6e94-7fa4-4226-acdd-5a76068dfe63',
+  msalTenantId: '872e70c7-7df6-47e5-b1d7-205e0eb98352',
+  msalRedirectUri: 'https://vppbaseballeliterivesud.github.io/dashboard/',
+  graphSiteId: '6f30a2ee-c8fd-4a6a-ae91-f45eaca170ef',
+  graphDriveId: 'b!7qIwb_3IakqukfRerKFw7xeR4hz-8SFGgOxhHJAktksOcj9usSB3QYXlqckM06Ac',
+  useMockData: false      // true = données mock, false = MSAL + Graph API. Forcer mock via ?mock=1 dans l'URL
+};
+
+const CATEGORIES_ORDER = ['9U', '11U', '13U', '15U', '18U', '21U'];
+
+const VIEWS = {
+  'camp-categorie':      { label: 'Camp – Catégorie',       forAll: true },
+  'camp-association':    { label: 'Camp – Association',      forAll: true },
+  'precamp-b':           { label: 'Pré-Camp Joueurs B',     forAll: false, onlyOrg: 'cardinals' },
+  'selection-categorie': { label: 'Sélection – Catégorie',  forAll: true },
+  'selection-association':{ label: 'Sélection – Association', forAll: true },
+  'validation-n1':       { label: 'Validation N-1 → Camp N', forAll: true },
+  'matrices':            { label: 'Matrices',                forAll: true }
+};
+
+// ================================================================
+//  STATE
+// ================================================================
+const state = {
+  org: 'cardinals',
+  year: 2026,
+  years: [2026, 2025],
+  activeView: 'camp-categorie',
+  data: {
+    camp: [],
+    selection: [],
+    preCampB: []
+  }
+};
+
+// ================================================================
+//  MOCK DATA GENERATOR
+// ================================================================
+function generateMockData() {
+  const ASSOCIATIONS = [
+    'ASSOCIATION BASEBALL MINEUR SAINT-HUBERT',
+    'ORGANISATION BASEBALL MINEUR BOUCHERVILLE',
+    'ASSOCIATION DU BASEBALL MINEUR DE SAINT-BRUNO',
+    'ASSOCIATION BASEBALL AMATEUR SAINTE-JULIE',
+    'ASSOCIATION DU BASEBALL MINEUR VARENNES',
+    'LIGUE DE BASEBALL MINEUR SAINT-JEAN INC',
+    'ASSOCIATION DU BASEBALL MINEUR DE CANDIAC',
+    'ASSOCIATION BASEBALL AMATEUR CHAMBLY',
+    'ASSOCIATION BASEBALL AMATEUR SAINT-LAMBERT',
+    'ASSOCIATION DE BASEBALL MINEUR DE BROSSARD',
+    'ASSOCIATION BASEBALL MINEUR SAINT-AMABLE',
+    'ASSOCIATION BASEBALL MINEUR MARIEVILLE',
+    'ASSOCIATION BASEBALL MINEUR SAINT-BASILE-LE-GRAND',
+    'ASSOCIATION BASEBALL MINEUR SHERRINGTON',
+    'ASSOCIATION BASEBALL MINEUR DU ROUSSILLON'
+  ];
+
+  const PRENOMS = ['Alexis','Mathis','William','Noah','Thomas','Nathan','Samuel','Gabriel','Olivier','Félix',
+    'Antoine','Raphaël','Émile','Liam','Jacob','Zachary','Benjamin','Étienne','Xavier','Léo',
+    'Charles','Elliot','Maxime','Hugo','Édouard','Julien','Lucas','Adam','Nicolas','Loïc',
+    'Arnaud','Malik','Cédric','Tristan','Jérémy','Damien','Simon','Philippe','Marc-Antoine','Louis',
+    'Vincent','Mathieu','Alexandre','Dylan','Jayden','Tyler','Logan','Kévin','Justin','Rayan'];
+
+  const NOMS = ['Tremblay','Gagnon','Roy','Côté','Bouchard','Gauthier','Morin','Lavoie','Fortin','Gagné',
+    'Ouellet','Pelletier','Bélanger','Lévesque','Bergeron','Leblanc','Paquette','Girard','Simard','Boucher',
+    'Caron','Beaulieu','Cloutier','Dubé','Poirier','Fournier','Lapointe','Leclerc','Lefebvre','Martel',
+    'Nadeau','Richard','Hébert','Desjardins','Savard','Vaillancourt','Blais','Proulx','Gosselin','Thibault'];
+
+  // Seeded pseudo-random
+  let seed = 42;
+  function rand() { seed = (seed * 16807 + 0) % 2147483647; return (seed - 1) / 2147483646; }
+  function pick(arr) { return arr[Math.floor(rand() * arr.length)]; }
+  function randInt(min, max) { return min + Math.floor(rand() * (max - min + 1)); }
+
+  let idCounter = 10000;
+  function genId() { return String(++idCounter); }
+
+  function birthForCat(cat, year) {
+    const baseYear = { '9U': year - 9, '11U': year - 11, '13U': year - 13, '15U': year - 15,
+      '15U/16UF': year - 15, '18U': year - 18, '18U/21UF': year - 19, '21U': year - 20 };
+    const by = (baseYear[cat] || year - 12) + randInt(0, 1);
+    const m = String(randInt(1, 12)).padStart(2, '0');
+    const d = String(randInt(1, 28)).padStart(2, '0');
+    return `${by}-${m}-${d}`;
+  }
+
+  function genPlayers(org, year, type, countsByCat) {
+    const records = [];
+    for (const cat of CATEGORIES_ORDER) {
+      const n = countsByCat[cat] || 0;
+      for (let i = 0; i < n; i++) {
+        records.push({
+          organisationElite: org === 'cardinals' ? 'Cardinals' : 'Carouges',
+          annee: year,
+          typeInscription: type,
+          estArchive: year < 2026,
+          joueurId: genId(),
+          nom: `${pick(NOMS)}, ${pick(PRENOMS)}`,
+          associationPrimaire: pick(ASSOCIATIONS),
+          categorie: cat,
+          dateNaissance: birthForCat(cat, year)
+        });
+      }
+    }
+    return records;
+  }
+
+  // Cardinals camp distributions
+  const campCounts2026 = { '9U': 55, '11U': 80, '13U': 72, '15U': 65, '18U': 58, '21U': 63 };
+  const campCounts2025 = { '9U': 48, '11U': 75, '13U': 68, '15U': 60, '18U': 52, '21U': 55 };
+  const selCounts2026  = { '9U': 40, '11U': 65, '13U': 58, '15U': 50, '18U': 48, '21U': 67 };
+  const selCounts2025  = { '9U': 35, '11U': 58, '13U': 52, '15U': 45, '18U': 44, '21U': 50 };
+  const preBCounts2026 = { '9U': 8, '11U': 15, '13U': 14, '15U': 12, '18U': 10, '21U': 20 };
+  const preBCounts2025 = { '9U': 6, '11U': 12, '13U': 11, '15U': 10, '18U': 9, '21U': 16 };
+
+  // Carouges (pas de pre-camp B, volumes un peu moindres)
+  const carCampCounts2026 = { '9U': 42, '11U': 60, '13U': 55, '15U': 48, '18U': 42, '21U': 45 };
+  const carCampCounts2025 = { '9U': 38, '11U': 55, '13U': 50, '15U': 44, '18U': 38, '21U': 40 };
+  const carSelCounts2026  = { '9U': 32, '11U': 48, '13U': 42, '15U': 38, '18U': 35, '21U': 38 };
+  const carSelCounts2025  = { '9U': 28, '11U': 42, '13U': 38, '15U': 34, '18U': 30, '21U': 34 };
+
+  const camp = [
+    ...genPlayers('cardinals', 2026, 'camp', campCounts2026),
+    ...genPlayers('cardinals', 2025, 'camp', campCounts2025),
+    ...genPlayers('carouges', 2026, 'camp', carCampCounts2026),
+    ...genPlayers('carouges', 2025, 'camp', carCampCounts2025)
+  ];
+
+  const selection = [
+    ...genPlayers('cardinals', 2026, 'selection', selCounts2026),
+    ...genPlayers('cardinals', 2025, 'selection', selCounts2025),
+    ...genPlayers('carouges', 2026, 'selection', carSelCounts2026),
+    ...genPlayers('carouges', 2025, 'selection', carSelCounts2025)
+  ];
+
+  const preCampB = [
+    ...genPlayers('cardinals', 2026, 'pre-camp-b', preBCounts2026),
+    ...genPlayers('cardinals', 2025, 'pre-camp-b', preBCounts2025)
+  ];
+
+  // Make some pre-camp B players also appear in camp and selection (for cross-lookups)
+  preCampB.forEach((p, i) => {
+    if (rand() < 0.7) {
+      const campMatch = camp.find(c => c.annee === p.annee && c.categorie === p.categorie && c.organisationElite === p.organisationElite);
+      if (campMatch) campMatch.joueurId = p.joueurId;
+    }
+    if (rand() < 0.5) {
+      const selMatch = selection.find(s => s.annee === p.annee && s.categorie === p.categorie && s.organisationElite === p.organisationElite);
+      if (selMatch) selMatch.joueurId = p.joueurId;
+    }
+  });
+
+  // Make some selection N-1 players appear in camp N (for validation view)
+  const sel2025Cards = selection.filter(s => s.annee === 2025 && s.organisationElite === 'Cardinals');
+  const camp2026Cards = camp.filter(c => c.annee === 2026 && c.organisationElite === 'Cardinals');
+  sel2025Cards.forEach((p, i) => {
+    if (rand() < 0.75 && i < camp2026Cards.length) {
+      camp2026Cards[i].joueurId = p.joueurId;
+    }
+  });
+
+  const sel2025Car = selection.filter(s => s.annee === 2025 && s.organisationElite === 'Carouges');
+  const camp2026Car = camp.filter(c => c.annee === 2026 && c.organisationElite === 'Carouges');
+  sel2025Car.forEach((p, i) => {
+    if (rand() < 0.75 && i < camp2026Car.length) {
+      camp2026Car[i].joueurId = p.joueurId;
+    }
+  });
+
+  return { camp, selection, preCampB };
+}
+
+// ================================================================
+//  DATA SERVICE (MSAL + Graph API + SheetJS)
+// ================================================================
+const dataService = {
+  msalInstance: null,
+  account: null,
+
+  // --- INIT ---
+  async init() {
+    if (CONFIG.useMockData) {
+      state.data = generateMockData();
+      this.hideLoading();
+      return;
+    }
+    try {
+      this.showLoading('Initialisation de l\'authentification...');
+      // Timeout de 15s pour éviter de rester bloqué sur le spinner
+      const timeout = (ms) => new Promise((_, reject) => setTimeout(() => reject(new Error('Délai d\'authentification dépassé')), ms));
+      await Promise.race([this.initMsal(), timeout(15000)]);
+      await Promise.race([this.login(), timeout(15000)]);
+      this.showLoading('Chargement des données depuis SharePoint...');
+      state.data = await this.loadFromSharePoint();
+      this.hideLoading();
+    } catch (err) {
+      this.hideLoading();
+      // Fallback to mock data
+      console.warn('Fallback vers données mock:', err);
+      state.data = generateMockData();
+      document.getElementById('authStatus').textContent = 'Mode démo (erreur auth)';
+      this.showError(err);
+    }
+  },
+
+  // --- MSAL INIT ---
+  async initMsal() {
+    const msalConfig = {
+      auth: {
+        clientId: CONFIG.msalClientId,
+        authority: `https://login.microsoftonline.com/${CONFIG.msalTenantId}`,
+        redirectUri: CONFIG.msalRedirectUri
+      },
+      cache: {
+        cacheLocation: 'sessionStorage',
+        storeAuthStateInCookie: false
+      }
+    };
+    this.msalInstance = new msal.PublicClientApplication(msalConfig);
+    await this.msalInstance.initialize();
+
+    // Handle redirect promise (for redirect flow)
+    const response = await this.msalInstance.handleRedirectPromise();
+    if (response) {
+      this.account = response.account;
+    }
+  },
+
+  // --- LOGIN ---
+  async login() {
+    const loginRequest = { scopes: ['Files.Read.All'] };
+
+    // Try silent login first (cached session)
+    const accounts = this.msalInstance.getAllAccounts();
+    if (accounts.length > 0) {
+      this.account = accounts[0];
+      try {
+        await this.msalInstance.acquireTokenSilent({ ...loginRequest, account: this.account });
+        this.updateAuthUI();
+        return;
+      } catch (e) {
+        // Silent failed, will try interactive
+      }
+    }
+
+    // Interactive login
+    try {
+      const response = await this.msalInstance.loginPopup(loginRequest);
+      this.account = response.account;
+      this.updateAuthUI();
+    } catch (err) {
+      throw new Error(`Échec de connexion M365 : ${err.message}`);
+    }
+  },
+
+  updateAuthUI() {
+    if (this.account) {
+      document.getElementById('authStatus').textContent = this.account.username;
+      document.getElementById('btnLogin').style.display = 'none';
+    }
+  },
+
+  // --- ACCESS TOKEN ---
+  async getToken() {
+    const request = { scopes: ['Files.Read.All'], account: this.account };
+    try {
+      const response = await this.msalInstance.acquireTokenSilent(request);
+      return response.accessToken;
+    } catch (e) {
+      // Token expired, try interactive
+      const response = await this.msalInstance.acquireTokenPopup(request);
+      return response.accessToken;
+    }
+  },
+
+  // --- GRAPH API CALLS ---
+  async graphGet(url) {
+    const token = await this.getToken();
+    const response = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) {
+      throw new Error(`Graph API ${response.status}: ${response.statusText} — ${url}`);
+    }
+    return response;
+  },
+
+  async graphGetJson(url) {
+    const response = await this.graphGet(url);
+    return response.json();
+  },
+
+  async graphGetArrayBuffer(url) {
+    const response = await this.graphGet(url);
+    return response.arrayBuffer();
+  },
+
+  // --- SHAREPOINT FILE DISCOVERY ---
+  async listFolderChildren(folderPath) {
+    // List files in a folder under the drive root
+    // folderPath examples: "cardinals/saisons", "carouges/archives"
+    const url = `https://graph.microsoft.com/v1.0/drives/${CONFIG.graphDriveId}/root:/${encodeURIComponent(folderPath)}:/children?$select=name,id,file,size`;
+    try {
+      const data = await this.graphGetJson(url);
+      return (data.value || []).filter(item => item.file && item.name.endsWith('.xlsx'));
+    } catch (e) {
+      console.warn(`Dossier introuvable ou vide: ${folderPath}`, e.message);
+      return [];
+    }
+  },
+
+  // --- LOAD ALL DATA FROM SHAREPOINT ---
+  async loadFromSharePoint() {
+    const orgs = ['cardinals', 'carouges'];
+    const folders = ['saisons', 'archives'];
+    const camp = [];
+    const selection = [];
+    const preCampB = [];
+
+    // Discover all xlsx files across all org/folder combinations
+    const discoveries = [];
+    for (const org of orgs) {
+      for (const folder of folders) {
+        const path = `${org}/${folder}`;
+        this.showLoading('Découverte des fichiers...', path);
+        const files = await this.listFolderChildren(path);
+        files.forEach(file => {
+          discoveries.push({
+            file,
+            org,
+            estArchive: folder === 'archives',
+            path
+          });
+        });
+      }
+    }
+
+    if (discoveries.length === 0) {
+      throw new Error('Aucun fichier xlsx trouvé dans les dossiers SharePoint. Vérifiez la structure des dossiers (cardinals/saisons, cardinals/archives, carouges/saisons, carouges/archives).');
+    }
+
+    // Download and parse each file
+    for (let i = 0; i < discoveries.length; i++) {
+      const { file, org, estArchive } = discoveries[i];
+      this.showLoading(`Téléchargement (${i + 1}/${discoveries.length})...`, file.name);
+
+      // Infer type and year from filename
+      const metadata = this.parseFilename(file.name, org, estArchive);
+      if (!metadata) {
+        console.warn(`Nom de fichier non reconnu, ignoré: ${file.name}`);
+        continue;
+      }
+
+      // Download xlsx
+      const downloadUrl = `https://graph.microsoft.com/v1.0/drives/${CONFIG.graphDriveId}/items/${file.id}/content`;
+      const buffer = await this.graphGetArrayBuffer(downloadUrl);
+
+      // Parse with SheetJS
+      const records = this.parseXlsx(buffer, metadata);
+
+      // Route to correct collection
+      switch (metadata.type) {
+        case 'camp':       camp.push(...records); break;
+        case 'selection':  selection.push(...records); break;
+        case 'pre-camp-b': preCampB.push(...records); break;
+      }
+    }
+
+    this.showLoading('Finalisation...');
+    return { camp, selection, preCampB };
+  },
+
+  // --- FILENAME PARSER ---
+  parseFilename(filename, org, estArchive) {
+    // Expected patterns: camp-2025.xlsx, selections-2025.xlsx, pre-camp-b-2025.xlsx
+    // Also handle: Cardinals-camp-2025.xlsx (legacy/dev format)
+    const name = filename.toLowerCase().replace(/\.xlsx$/, '');
+
+    let type = null;
+    let annee = null;
+
+    // Extract year (last 4-digit number in filename)
+    const yearMatch = name.match(/(\d{4})/);
+    if (!yearMatch) return null;
+    annee = parseInt(yearMatch[1]);
+
+    // Determine type
+    if (name.includes('pre-camp') || name.includes('precamp')) {
+      type = 'pre-camp-b';
+    } else if (name.includes('selection')) {
+      type = 'selection';
+    } else if (name.includes('camp')) {
+      type = 'camp';
+    } else {
+      return null;
+    }
+
+    return {
+      org: org === 'cardinals' ? 'Cardinals' : 'Carouges',
+      annee,
+      type,
+      estArchive
+    };
+  },
+
+  // --- XLSX PARSING ---
+  parseXlsx(buffer, metadata) {
+    const workbook = XLSX.read(buffer, { type: 'array' });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+    return rows
+      .map(row => this.normalizeRow(row, metadata))
+      .filter(r => r.joueurId); // Skip empty rows
+  },
+
+  // --- ROW NORMALIZATION ---
+  normalizeRow(row, metadata) {
+    return {
+      organisationElite: metadata.org,
+      annee: metadata.annee,
+      typeInscription: metadata.type,
+      estArchive: metadata.estArchive,
+      joueurId: String(row['ID du participant'] || '').trim(),
+      nom: `${(row['Nom'] || '').trim()}, ${(row['Prénom'] || '').trim()}`,
+      associationPrimaire: (row['Nom de l\'organisation primaire'] || '').trim(),
+      categorie: (row['Nom de division'] || '').trim() || 'Inconnu',
+      dateNaissance: this.parseDate(row['Date de naissance'])
+    };
+  },
+
+  parseDate(val) {
+    if (!val) return '';
+    if (typeof val === 'number') {
+      // Excel serial date
+      const d = new Date((val - 25569) * 86400000);
+      return d.toISOString().slice(0, 10);
+    }
+    const d = new Date(val);
+    return isNaN(d) ? String(val) : d.toISOString().slice(0, 10);
+  },
+
+  // --- UI HELPERS ---
+  showLoading(text, detail) {
+    const overlay = document.getElementById('loadingOverlay');
+    overlay.classList.remove('hidden');
+    document.getElementById('loadingText').textContent = text || 'Chargement...';
+    document.getElementById('loadingDetail').textContent = detail || '';
+  },
+
+  hideLoading() {
+    document.getElementById('loadingOverlay').classList.add('hidden');
+  },
+
+  showError(err) {
+    const main = document.querySelector('.main');
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'error-msg';
+    errorDiv.innerHTML = `<strong>Erreur :</strong> ${err.message}<br><small>Les données mock sont utilisées en remplacement. Vérifiez la console pour plus de détails.</small>`;
+    main.prepend(errorDiv);
+  }
+};
+
+// ================================================================
+//  HELPERS
+// ================================================================
+function getOrgLabel() { return state.org === 'cardinals' ? 'Cardinals' : 'Carouges'; }
+
+function filterByOrgYear(collection, year) {
+  const orgLabel = getOrgLabel();
+  return collection.filter(r => r.organisationElite === orgLabel && r.annee === year);
+}
+
+function groupBy(arr, key) {
+  const map = new Map();
+  arr.forEach(r => {
+    const k = r[key];
+    if (!map.has(k)) map.set(k, []);
+    map.get(k).push(r);
+  });
+  return map;
+}
+
+function sortedCategories(groups) {
+  const keys = Array.from(groups.keys());
+  return keys.sort((a, b) => {
+    const ia = CATEGORIES_ORDER.indexOf(a);
+    const ib = CATEGORIES_ORDER.indexOf(b);
+    if (ia === -1 && ib === -1) return a.localeCompare(b);
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+}
+
+function sortedAssociations(groups) {
+  return Array.from(groups.keys()).sort((a, b) => a.localeCompare(b, 'fr'));
+}
+
+function deltaHtml(n, n1) {
+  const d = n - n1;
+  if (d > 0) return `<span class="delta-pos">+${d}</span>`;
+  if (d < 0) return `<span class="delta-neg">${d}</span>`;
+  return `<span class="delta-zero">0</span>`;
+}
+
+function deltaPctHtml(n, n1) {
+  if (n1 === 0) return `<span class="delta-zero">—</span>`;
+  const pct = ((n - n1) / n1 * 100).toFixed(1);
+  if (pct > 0) return `<span class="delta-pos">+${pct}%</span>`;
+  if (pct < 0) return `<span class="delta-neg">${pct}%</span>`;
+  return `<span class="delta-zero">0%</span>`;
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function buildPreCampBSet(year) {
+  const orgLabel = getOrgLabel();
+  return new Set(
+    state.data.preCampB
+      .filter(r => r.organisationElite === orgLabel && r.annee === year)
+      .map(r => r.joueurId)
+  );
+}
+
+// ================================================================
+//  DRILL-DOWN TABLE ENGINE
+// ================================================================
+function renderDrillDown(container, {
+  title, data, dataPrev,
+  level1Key, level2Key, level1Sort, level2Sort,
+  showDeltaPct = false, showPreCampBLevel3 = false,
+  level3ExtraCols = []
+}) {
+  const g1 = groupBy(data, level1Key);
+  const g1prev = groupBy(dataPrev, level1Key);
+  const preBSet = (showPreCampBLevel3 && state.org === 'cardinals') ? buildPreCampBSet(state.year) : null;
+
+  const allKeys1 = new Set([...g1.keys(), ...g1prev.keys()]);
+  const sorted1 = level1Sort === 'categorie'
+    ? sortedCategories(new Map([...allKeys1].map(k => [k, []])))
+    : [...allKeys1].sort((a, b) => a.localeCompare(b, 'fr'));
+
+  // Calculate total columns for consistent spanning
+  let baseCols = 4; // name + N + N-1 + Δ
+  if (showDeltaPct) baseCols++;
+  const hasPreB = preBSet != null;
+  const extraCount = (hasPreB ? 1 : 0) + level3ExtraCols.length;
+  const totalCols = Math.max(baseCols, 4 + extraCount); // level-3 has: ID, Nom, Assoc, Date + extras
+
+  const pctHeader = showDeltaPct ? '<th class="num">Δ%</th>' : '';
+  // Pad header to totalCols
+  const padCols = totalCols - baseCols;
+  const padHeaders = padCols > 0 ? `<th colspan="${padCols}"></th>` : '';
+
+  let html = `<h2 class="view-title">${title}</h2>`;
+  html += `<div class="table-container"><table>
+    <thead><tr>
+      <th>${level1Key === 'categorie' ? 'Catégorie' : 'Association Primaire'}</th>
+      <th class="num">Inscrits ${state.year}</th>
+      <th class="num">Inscrits ${state.year - 1}</th>
+      <th class="num">Δ</th>
+      ${pctHeader}
+      ${padHeaders}
+    </tr></thead><tbody>`;
+
+  let rowId = 0;
+  sorted1.forEach(key1 => {
+    const items = g1.get(key1) || [];
+    const itemsPrev = g1prev.get(key1) || [];
+    const parentId = rowId++;
+    const padTds = totalCols - baseCols;
+    const pad = padTds > 0 ? `<td colspan="${padTds}"></td>` : '';
+
+    html += `<tr class="level-1" data-id="${parentId}">
+      <td>${key1}</td>
+      <td class="num">${items.length}</td>
+      <td class="num">${itemsPrev.length}</td>
+      <td class="num">${deltaHtml(items.length, itemsPrev.length)}</td>
+      ${showDeltaPct ? `<td class="num">${deltaPctHtml(items.length, itemsPrev.length)}</td>` : ''}
+      ${pad}
+    </tr>`;
+
+    // Level 2
+    const g2 = groupBy(items, level2Key);
+    const g2prev = groupBy(itemsPrev, level2Key);
+    const allKeys2 = new Set([...g2.keys(), ...g2prev.keys()]);
+    const sorted2 = level2Sort === 'categorie'
+      ? sortedCategories(new Map([...allKeys2].map(k => [k, []])))
+      : [...allKeys2].sort((a, b) => a.localeCompare(b, 'fr'));
+
+    sorted2.forEach(key2 => {
+      const items2 = g2.get(key2) || [];
+      const items2prev = g2prev.get(key2) || [];
+      const l2Id = rowId++;
+
+      html += `<tr class="level-2" data-parent="${parentId}" data-id="${l2Id}">
+        <td>${key2}</td>
+        <td class="num">${items2.length}</td>
+        <td class="num">${items2prev.length}</td>
+        <td class="num">${deltaHtml(items2.length, items2prev.length)}</td>
+        ${showDeltaPct ? '<td></td>' : ''}
+        ${pad}
+      </tr>`;
+
+      // Level 3 — sub-header row
+      let l3Headers = '<td style="padding-left:58px;font-weight:600;font-size:11px;color:#999">ID</td>' +
+        '<td style="font-weight:600;font-size:11px;color:#999">Nom</td>' +
+        '<td style="font-weight:600;font-size:11px;color:#999">Association</td>' +
+        '<td style="font-weight:600;font-size:11px;color:#999">Date naissance</td>';
+      if (hasPreB) l3Headers += '<td style="font-weight:600;font-size:11px;color:#999">Pré-Camp B</td>';
+      level3ExtraCols.forEach(c => { l3Headers += `<td style="font-weight:600;font-size:11px;color:#999">${c.header}</td>`; });
+      // Pad remaining cols
+      const l3UsedCols = 4 + extraCount;
+      if (totalCols > l3UsedCols) l3Headers += `<td colspan="${totalCols - l3UsedCols}"></td>`;
+
+      html += `<tr class="level-3 level-3-header" data-parent2="${l2Id}" style="background:#eef1f5">
+        ${l3Headers}
+      </tr>`;
+
+      // Level 3 — player rows
+      items2.sort((a, b) => a.nom.localeCompare(b.nom, 'fr')).forEach(p => {
+        let extraTds = '';
+        if (hasPreB) {
+          extraTds += `<td>${preBSet.has(p.joueurId) ? '<span class="badge-b">B</span>' : '—'}</td>`;
+        }
+        level3ExtraCols.forEach(c => { extraTds += `<td>${c.render(p)}</td>`; });
+        const l3Pad = totalCols - (4 + extraCount);
+        const l3PadTd = l3Pad > 0 ? `<td colspan="${l3Pad}"></td>` : '';
+
+        html += `<tr class="level-3" data-parent2="${l2Id}">
+          <td>${p.joueurId}</td>
+          <td>${p.nom}</td>
+          <td>${p.associationPrimaire}</td>
+          <td>${formatDate(p.dateNaissance)}</td>
+          ${extraTds}
+          ${l3PadTd}
+        </tr>`;
+      });
+    });
+  });
+
+  html += '</tbody></table></div>';
+  container.innerHTML = html;
+  bindDrillDown(container);
+}
+
+function bindDrillDown(container) {
+  container.querySelectorAll('tr.level-1').forEach(row => {
+    row.addEventListener('click', () => {
+      const id = row.dataset.id;
+      const expanded = row.classList.toggle('expanded');
+      container.querySelectorAll(`tr.level-2[data-parent="${id}"]`).forEach(r2 => {
+        r2.classList.toggle('visible', expanded);
+        if (!expanded) {
+          r2.classList.remove('expanded');
+          container.querySelectorAll(`tr.level-3[data-parent2="${r2.dataset.id}"]`).forEach(r3 => {
+            r3.classList.remove('visible');
+          });
+        }
+      });
+    });
+  });
+
+  container.querySelectorAll('tr.level-2').forEach(row => {
+    row.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = row.dataset.id;
+      const expanded = row.classList.toggle('expanded');
+      container.querySelectorAll(`tr.level-3[data-parent2="${id}"]`).forEach(r3 => {
+        r3.classList.toggle('visible', expanded);
+      });
+    });
+  });
+}
+
+// ================================================================
+//  VIEW RENDERERS
+// ================================================================
+
+// --- Vue 1: Camp par catégorie ---
+function renderCampCategorie() {
+  const container = document.getElementById('view-camp-categorie');
+  renderDrillDown(container, {
+    title: `Camp – Par catégorie (${getOrgLabel()})`,
+    data: filterByOrgYear(state.data.camp, state.year),
+    dataPrev: filterByOrgYear(state.data.camp, state.year - 1),
+    level1Key: 'categorie', level2Key: 'associationPrimaire',
+    level1Sort: 'categorie', level2Sort: 'association',
+    showDeltaPct: true
+  });
+}
+
+// --- Vue 2: Camp par association ---
+function renderCampAssociation() {
+  const container = document.getElementById('view-camp-association');
+  renderDrillDown(container, {
+    title: `Camp – Par association (${getOrgLabel()})`,
+    data: filterByOrgYear(state.data.camp, state.year),
+    dataPrev: filterByOrgYear(state.data.camp, state.year - 1),
+    level1Key: 'associationPrimaire', level2Key: 'categorie',
+    level1Sort: 'association', level2Sort: 'categorie'
+  });
+}
+
+// --- Vue 3: Pré-Camp Joueurs B (Cardinals only) ---
+function renderPreCampB() {
+  const container = document.getElementById('view-precamp-b');
+  const preCampData = filterByOrgYear(state.data.preCampB, state.year);
+  const campData = filterByOrgYear(state.data.camp, state.year);
+  const selData = filterByOrgYear(state.data.selection, state.year);
+
+  const campIds = new Set(campData.map(r => r.joueurId));
+  const selIds = new Set(selData.map(r => r.joueurId));
+
+  const byCat = groupBy(preCampData, 'categorie');
+  const sortedCats = sortedCategories(byCat);
+
+  let html = `<h2 class="view-title">Pré-Camp Joueurs B (${getOrgLabel()})</h2>`;
+  html += `<div class="table-container"><table>
+    <thead><tr>
+      <th>Catégorie</th>
+      <th class="num">Invités B</th>
+      <th class="num">Inscrits camp</th>
+      <th class="num">Sélectionnés</th>
+      <th colspan="2"></th>
+    </tr></thead><tbody>`;
+
+  let rowId = 0;
+  sortedCats.forEach(cat => {
+    const players = byCat.get(cat) || [];
+    const inCamp = players.filter(p => campIds.has(p.joueurId)).length;
+    const selected = players.filter(p => selIds.has(p.joueurId)).length;
+    const parentId = rowId++;
+
+    html += `<tr class="level-1" data-id="${parentId}">
+      <td>${cat}</td>
+      <td class="num">${players.length}</td>
+      <td class="num">${inCamp}</td>
+      <td class="num">${selected}</td>
+      <td colspan="2"></td>
+    </tr>`;
+
+    // Level 2: by association
+    const byAssoc = groupBy(players, 'associationPrimaire');
+    sortedAssociations(byAssoc).forEach(assoc => {
+      const assocPlayers = byAssoc.get(assoc);
+      const aInCamp = assocPlayers.filter(p => campIds.has(p.joueurId)).length;
+      const aSelected = assocPlayers.filter(p => selIds.has(p.joueurId)).length;
+      const l2Id = rowId++;
+
+      html += `<tr class="level-2" data-parent="${parentId}" data-id="${l2Id}">
+        <td>${assoc}</td>
+        <td class="num">${assocPlayers.length}</td>
+        <td class="num">${aInCamp}</td>
+        <td class="num">${aSelected}</td>
+        <td colspan="2"></td>
+      </tr>`;
+
+      // Level 3 — sub-header
+      html += `<tr class="level-3 level-3-header" data-parent2="${l2Id}" style="background:#eef1f5">
+        <td style="padding-left:58px;font-weight:600;font-size:11px;color:#999">ID</td>
+        <td style="font-weight:600;font-size:11px;color:#999">Nom</td>
+        <td style="font-weight:600;font-size:11px;color:#999">Association</td>
+        <td style="font-weight:600;font-size:11px;color:#999">Date naissance</td>
+        <td style="font-weight:600;font-size:11px;color:#999">Au camp</td>
+        <td style="font-weight:600;font-size:11px;color:#999">Sélectionné</td>
+      </tr>`;
+
+      // Level 3: player list
+      assocPlayers.sort((a, b) => a.nom.localeCompare(b.nom, 'fr')).forEach(p => {
+        html += `<tr class="level-3" data-parent2="${l2Id}">
+          <td>${p.joueurId}</td>
+          <td>${p.nom}</td>
+          <td>${p.associationPrimaire}</td>
+          <td>${formatDate(p.dateNaissance)}</td>
+          <td>${campIds.has(p.joueurId) ? '<span class="badge-ok">✅</span>' : '<span class="badge-no">❌</span>'}</td>
+          <td>${selIds.has(p.joueurId) ? '<span class="badge-ok">✅</span>' : '<span class="badge-no">❌</span>'}</td>
+        </tr>`;
+      });
+    });
+  });
+
+  html += '</tbody></table></div>';
+  container.innerHTML = html;
+  bindDrillDown(container);
+}
+
+// --- Vue 4: Sélection par catégorie ---
+function renderSelectionCategorie() {
+  const container = document.getElementById('view-selection-categorie');
+  renderDrillDown(container, {
+    title: `Sélection – Par catégorie (${getOrgLabel()})`,
+    data: filterByOrgYear(state.data.selection, state.year),
+    dataPrev: filterByOrgYear(state.data.selection, state.year - 1),
+    level1Key: 'categorie', level2Key: 'associationPrimaire',
+    level1Sort: 'categorie', level2Sort: 'association',
+    showDeltaPct: true,
+    showPreCampBLevel3: true
+  });
+}
+
+// --- Vue 5: Sélection par association ---
+function renderSelectionAssociation() {
+  const container = document.getElementById('view-selection-association');
+  renderDrillDown(container, {
+    title: `Sélection – Par association (${getOrgLabel()})`,
+    data: filterByOrgYear(state.data.selection, state.year),
+    dataPrev: filterByOrgYear(state.data.selection, state.year - 1),
+    level1Key: 'associationPrimaire', level2Key: 'categorie',
+    level1Sort: 'association', level2Sort: 'categorie',
+    showPreCampBLevel3: true
+  });
+}
+
+// --- Vue 6: Validation N-1 → Camp N ---
+function renderValidationN1() {
+  const container = document.getElementById('view-validation-n1');
+  const selPrev = filterByOrgYear(state.data.selection, state.year - 1);
+  const campCurr = filterByOrgYear(state.data.camp, state.year);
+  const campIds = new Set(campCurr.map(r => r.joueurId));
+  const preBSet = state.org === 'cardinals' ? buildPreCampBSet(state.year) : null;
+
+  const inscrits = selPrev.filter(p => campIds.has(p.joueurId));
+  const manquants = selPrev.filter(p => !campIds.has(p.joueurId));
+  const total = selPrev.length;
+  const pctRetention = total > 0 ? ((inscrits.length / total) * 100).toFixed(1) : '0';
+
+  let html = `<h2 class="view-title">Validation N-1 → Camp N (${getOrgLabel()})</h2>`;
+
+  // KPI cards
+  html += `<div class="kpi-row">
+    <div class="kpi-card"><div class="kpi-value">${total}</div><div class="kpi-label">Sélectionnés ${state.year - 1}</div></div>
+    <div class="kpi-card positive"><div class="kpi-value">${inscrits.length}</div><div class="kpi-label">Inscrits camp ${state.year}</div></div>
+    <div class="kpi-card negative"><div class="kpi-value">${manquants.length}</div><div class="kpi-label">Non inscrits</div></div>
+    <div class="kpi-card neutral"><div class="kpi-value">${pctRetention}%</div><div class="kpi-label">Rétention</div></div>
+  </div>`;
+
+  // Filter controls
+  html += `<div style="margin-bottom:16px; display:flex; gap:12px; flex-wrap:wrap;">
+    <select id="val-filter-cat" style="padding:6px 10px; border-radius:6px; border:1px solid #ddd; font-size:13px;">
+      <option value="">Toutes les catégories</option>
+      ${CATEGORIES_ORDER.map(c => `<option value="${c}">${c}</option>`).join('')}
+    </select>
+    <select id="val-filter-status" style="padding:6px 10px; border-radius:6px; border:1px solid #ddd; font-size:13px;">
+      <option value="">Tous les statuts</option>
+      <option value="no">Non inscrits seulement</option>
+      <option value="yes">Inscrits seulement</option>
+    </select>
+  </div>`;
+
+  const preBHeader = preBSet ? '<th>Pré-Camp B</th>' : '';
+  html += `<div class="table-container"><table>
+    <thead><tr>
+      <th>ID Joueur</th><th>Nom</th><th>Association</th><th>Catégorie</th><th>Date naissance</th>
+      <th>Inscrit camp ${state.year}</th>${preBHeader}
+    </tr></thead><tbody id="val-tbody">`;
+
+  // Sort: non-inscrits first
+  const sorted = [...selPrev].sort((a, b) => {
+    const aIn = campIds.has(a.joueurId) ? 1 : 0;
+    const bIn = campIds.has(b.joueurId) ? 1 : 0;
+    if (aIn !== bIn) return aIn - bIn;
+    return a.nom.localeCompare(b.nom, 'fr');
+  });
+
+  sorted.forEach(p => {
+    const inscrit = campIds.has(p.joueurId);
+    const preBTd = preBSet ? `<td>${preBSet.has(p.joueurId) ? '<span class="badge-b">B</span>' : '—'}</td>` : '';
+    html += `<tr data-cat="${p.categorie}" data-inscrit="${inscrit ? 'yes' : 'no'}">
+      <td>${p.joueurId}</td><td>${p.nom}</td><td>${p.associationPrimaire}</td><td>${p.categorie}</td>
+      <td>${formatDate(p.dateNaissance)}</td>
+      <td>${inscrit ? '<span class="badge-ok">✅</span>' : '<span class="badge-no">❌</span>'}</td>
+      ${preBTd}
+    </tr>`;
+  });
+
+  html += '</tbody></table></div>';
+  container.innerHTML = html;
+
+  // Filter logic
+  const filterFn = () => {
+    const catVal = document.getElementById('val-filter-cat').value;
+    const statusVal = document.getElementById('val-filter-status').value;
+    document.querySelectorAll('#val-tbody tr').forEach(row => {
+      const matchCat = !catVal || row.dataset.cat === catVal;
+      const matchStatus = !statusVal || row.dataset.inscrit === statusVal;
+      row.style.display = (matchCat && matchStatus) ? '' : 'none';
+    });
+  };
+  document.getElementById('val-filter-cat').addEventListener('change', filterFn);
+  document.getElementById('val-filter-status').addEventListener('change', filterFn);
+}
+
+// --- Vue 7: Matrices ---
+function renderMatrices() {
+  const container = document.getElementById('view-matrices');
+  const campData = filterByOrgYear(state.data.camp, state.year);
+  const selData = filterByOrgYear(state.data.selection, state.year);
+
+  let html = `<h2 class="view-title">Matrices (${getOrgLabel()} – ${state.year})</h2>`;
+  html += renderMatrix('Matrice Camp', campData);
+  html += renderMatrix('Matrice Sélection', selData);
+  container.innerHTML = html;
+}
+
+function renderMatrix(title, data) {
+  const byAssoc = groupBy(data, 'associationPrimaire');
+  const assocs = sortedAssociations(byAssoc);
+  const cats = CATEGORIES_ORDER.filter(c => data.some(r => r.categorie === c));
+
+  let html = `<div class="matrix-section"><h3>${title}</h3>`;
+  html += `<div class="table-container"><table class="matrix">
+    <thead><tr><th style="text-align:left">Association</th>`;
+  cats.forEach(c => { html += `<th>${c}</th>`; });
+  html += '<th>Total</th></tr></thead><tbody>';
+
+  const colTotals = {};
+  cats.forEach(c => colTotals[c] = 0);
+  let grandTotal = 0;
+
+  assocs.forEach(assoc => {
+    const players = byAssoc.get(assoc);
+    const byCat = groupBy(players, 'categorie');
+    let rowTotal = 0;
+
+    html += `<tr><td class="row-header">${assoc}</td>`;
+    cats.forEach(c => {
+      const n = (byCat.get(c) || []).length;
+      rowTotal += n;
+      colTotals[c] += n;
+      html += `<td class="num">${n || ''}</td>`;
+    });
+    grandTotal += rowTotal;
+    html += `<td class="num" style="font-weight:600">${rowTotal}</td></tr>`;
+  });
+
+  // Total row
+  html += '<tr class="total-row"><td class="row-header">Total</td>';
+  cats.forEach(c => { html += `<td class="num">${colTotals[c]}</td>`; });
+  html += `<td class="num">${grandTotal}</td></tr>`;
+
+  html += '</tbody></table></div></div>';
+  return html;
+}
+
+// ================================================================
+//  NAVIGATION
+// ================================================================
+function buildNav() {
+  const navBar = document.getElementById('navBar');
+  navBar.innerHTML = '';
+  Object.entries(VIEWS).forEach(([id, view]) => {
+    if (!view.forAll && view.onlyOrg !== state.org) return;
+    const tab = document.createElement('div');
+    tab.className = 'nav-tab' + (id === state.activeView ? ' active' : '');
+    tab.textContent = view.label;
+    tab.addEventListener('click', () => navigate(id));
+    navBar.appendChild(tab);
+  });
+}
+
+function navigate(viewId) {
+  state.activeView = viewId;
+  document.querySelectorAll('.nav-tab').forEach((tab, i) => {
+    const keys = Object.keys(VIEWS).filter(id => VIEWS[id].forAll || VIEWS[id].onlyOrg === state.org);
+    tab.classList.toggle('active', keys[i] === viewId);
+  });
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const el = document.getElementById(`view-${viewId}`);
+  if (el) {
+    el.classList.add('active');
+    renderView(viewId);
+  }
+}
+
+function renderView(viewId) {
+  switch (viewId) {
+    case 'camp-categorie': renderCampCategorie(); break;
+    case 'camp-association': renderCampAssociation(); break;
+    case 'precamp-b': renderPreCampB(); break;
+    case 'selection-categorie': renderSelectionCategorie(); break;
+    case 'selection-association': renderSelectionAssociation(); break;
+    case 'validation-n1': renderValidationN1(); break;
+    case 'matrices': renderMatrices(); break;
+  }
+}
+
+function renderAllViews() {
+  renderView(state.activeView);
+}
+
+// ================================================================
+//  INIT
+// ================================================================
+async function init() {
+  // Parse URL params
+  const params = new URLSearchParams(window.location.search);
+  state.org = params.get('org') || 'cardinals';
+
+  // Allow ?mock=1 to force mock data (useful for testing)
+  if (params.has('mock')) CONFIG.useMockData = true;
+
+  document.getElementById('orgBadge').textContent = getOrgLabel();
+  document.getElementById('orgBadge').style.background =
+    state.org === 'cardinals' ? '#e94560' : '#2ecc71';
+
+  // Org selector
+  const orgSelect = document.getElementById('orgSelect');
+  orgSelect.value = state.org;
+  orgSelect.addEventListener('change', () => {
+    state.org = orgSelect.value;
+    document.getElementById('orgBadge').textContent = getOrgLabel();
+    document.getElementById('orgBadge').style.background =
+      state.org === 'cardinals' ? '#e94560' : '#2ecc71';
+    // Update URL without reload
+    const url = new URL(window.location);
+    url.searchParams.set('org', state.org);
+    history.replaceState(null, '', url);
+    // Rebuild nav (precamp-b visibility depends on org)
+    if (state.activeView === 'precamp-b' && state.org !== 'cardinals') {
+      state.activeView = 'camp-categorie';
+    }
+    buildNav();
+    navigate(state.activeView);
+  });
+
+  // Show login button if not using mock data (in case popup is blocked)
+  if (!CONFIG.useMockData) {
+    const btnLogin = document.getElementById('btnLogin');
+    btnLogin.style.display = 'inline-block';
+    btnLogin.addEventListener('click', async () => {
+      try {
+        await dataService.login();
+        dataService.showLoading('Chargement des données depuis SharePoint...');
+        state.data = await dataService.loadFromSharePoint();
+        dataService.hideLoading();
+        renderAllViews();
+      } catch (err) {
+        dataService.showError(err);
+      }
+    });
+  }
+
+  // Load data
+  await dataService.init();
+
+  // Detect available years
+  const allYears = new Set();
+  [...state.data.camp, ...state.data.selection, ...state.data.preCampB].forEach(r => allYears.add(r.annee));
+  state.years = [...allYears].sort((a, b) => b - a);
+  state.year = state.years[0] || 2026;
+
+  // Year selector
+  const yearSelect = document.getElementById('yearSelect');
+  state.years.forEach(y => {
+    const opt = document.createElement('option');
+    opt.value = y;
+    opt.textContent = y;
+    if (y === state.year) opt.selected = true;
+    yearSelect.appendChild(opt);
+  });
+  yearSelect.addEventListener('change', () => {
+    state.year = parseInt(yearSelect.value);
+    renderAllViews();
+  });
+
+  // Adjust default view if precamp-b not available
+  if (state.activeView === 'precamp-b' && state.org !== 'cardinals') {
+    state.activeView = 'camp-categorie';
+  }
+
+  // Build nav and render
+  buildNav();
+  navigate(state.activeView);
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
