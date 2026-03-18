@@ -986,7 +986,6 @@ function renderValidationN1() {
   const selPrev = filterByOrgYear(state.data.selection, state.year - 1);
   const campCurr = filterByOrgYear(state.data.camp, state.year);
   const campIds = new Set(campCurr.map(r => r.joueurId));
-  const preBSet = state.org === 'cardinals' ? buildPreCampBSet(state.year) : null;
 
   const inscrits = selPrev.filter(p => campIds.has(p.joueurId));
   const manquants = selPrev.filter(p => !campIds.has(p.joueurId));
@@ -1016,11 +1015,10 @@ function renderValidationN1() {
     </select>
   </div>`;
 
-  const preBHeader = preBSet ? '<th>Pré-Camp B</th>' : '';
   html += `<div class="table-container"><table>
     <thead><tr>
       <th>ID Joueur</th><th>Nom</th><th>Association</th><th>Catégorie</th><th>Date naissance</th>
-      <th>Inscrit camp ${state.year}</th>${preBHeader}
+      <th>Inscrit camp ${state.year}</th>
     </tr></thead><tbody id="val-tbody">`;
 
   // Sort: non-inscrits first
@@ -1033,12 +1031,10 @@ function renderValidationN1() {
 
   sorted.forEach(p => {
     const inscrit = campIds.has(p.joueurId);
-    const preBTd = preBSet ? `<td>${preBSet.has(p.joueurId) ? '<span class="badge-b">B</span>' : '—'}</td>` : '';
     html += `<tr data-cat="${p.categorie}" data-inscrit="${inscrit ? 'yes' : 'no'}">
       <td>${p.joueurId}</td><td>${p.nom}</td><td>${p.associationPrimaire}</td><td>${p.categorie}</td>
       <td>${formatDate(p.dateNaissance)}</td>
       <td>${inscrit ? '<span class="badge-ok">✅</span>' : '<span class="badge-no">❌</span>'}</td>
-      ${preBTd}
     </tr>`;
   });
 
