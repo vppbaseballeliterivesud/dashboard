@@ -341,16 +341,26 @@ const dataService = {
     }
     try {
       this.showLoading('Initialisation de l\'authentification...');
-      // Timeout de 15s pour éviter de rester bloqué sur le spinner
-      const timeout = (ms) => new Promise((_, reject) => setTimeout(() => reject(new Error('Délai d\'authentification dépassé')), ms));
-      await Promise.race([this.initMsal(), timeout(15000)]);
-      await Promise.race([this.login(), timeout(15000)]);
+      await this.initMsal();
+      // If handleRedirectPromise returned an account, we're back from redirect
+      if (!this.account) {
+        // Check cached accounts
+        const accounts = this.msalInstance.getAllAccounts();
+        if (accounts.length > 0) {
+          this.account = accounts[0];
+        } else {
+          // No account — trigger redirect login (page will reload)
+          this.showLoading('Redirection vers la page de connexion Microsoft...');
+          await this.msalInstance.loginRedirect({ scopes: ['Files.Read.All'] });
+          return; // Page will redirect, stop here
+        }
+      }
+      this.updateAuthUI();
       this.showLoading('Chargement des données depuis SharePoint...');
       state.data = await this.loadFromSharePoint();
       this.hideLoading();
     } catch (err) {
       this.hideLoading();
-      // Fallback to mock data
       console.warn('Fallback vers données mock:', err);
       state.data = generateMockData();
       document.getElementById('authStatus').textContent = 'Mode démo (erreur auth)';
@@ -388,32 +398,7 @@ const dataService = {
     }
   },
 
-  // --- LOGIN ---
-  async login() {
-    const loginRequest = { scopes: ['Files.Read.All'] };
-
-    // Try silent login first (cached session)
-    const accounts = this.msalInstance.getAllAccounts();
-    if (accounts.length > 0) {
-      this.account = accounts[0];
-      try {
-        await this.msalInstance.acquireTokenSilent({ ...loginRequest, account: this.account });
-        this.updateAuthUI();
-        return;
-      } catch (e) {
-        // Silent failed, will try interactive
-      }
-    }
-
-    // Interactive login
-    try {
-      const response = await this.msalInstance.loginPopup(loginRequest);
-      this.account = response.account;
-      this.updateAuthUI();
-    } catch (err) {
-      throw new Error(`Échec de connexion M365 : ${err.message}`);
-    }
-  },
+  // --- LOGIN (redirect-based, no popups) ---
 
   updateAuthUI() {
     if (this.account) {
@@ -429,9 +414,9 @@ const dataService = {
       const response = await this.msalInstance.acquireTokenSilent(request);
       return response.accessToken;
     } catch (e) {
-      // Token expired, try interactive
-      const response = await this.msalInstance.acquireTokenPopup(request);
-      return response.accessToken;
+      // Token expired, redirect to re-authenticate
+      await this.msalInstance.acquireTokenRedirect(request);
+      return null; // Page will redirect
     }
   },
 
@@ -1198,11 +1183,8 @@ async function init() {
     btnLogin.style.display = 'inline-block';
     btnLogin.addEventListener('click', async () => {
       try {
-        await dataService.login();
-        dataService.showLoading('Chargement des données depuis SharePoint...');
-        state.data = await dataService.loadFromSharePoint();
-        dataService.hideLoading();
-        renderAllViews();
+        await dataService.initMsal();
+        await dataService.msalInstance.loginRedirect({ scopes: ['Files.Read.All'] });
       } catch (err) {
         dataService.showError(err);
       }
