@@ -164,9 +164,9 @@ const CONFIG = {
 const CATEGORIES_ORDER = ['9U', '11U', '13U', '15U', '18U', '21U'];
 
 const VIEWS = {
+  'precamp-b':           { label: 'Pré-Camp Joueurs B',     forAll: false, onlyOrg: 'cardinals' },
   'camp-categorie':      { label: 'Camp – Catégorie',       forAll: true },
   'camp-association':    { label: 'Camp – Association',      forAll: true },
-  'precamp-b':           { label: 'Pré-Camp Joueurs B',     forAll: false, onlyOrg: 'cardinals' },
   'selection-categorie': { label: 'Sélection – Catégorie',  forAll: true },
   'selection-association':{ label: 'Sélection – Association', forAll: true },
   'validation-n1':       { label: 'Validation N-1 → Camp N', forAll: true },
@@ -180,7 +180,7 @@ const state = {
   org: 'cardinals',
   year: 2026,
   years: [2026, 2025],
-  activeView: 'camp-categorie',
+  activeView: 'precamp-b',
   data: {
     camp: [],
     selection: [],
@@ -446,7 +446,8 @@ const dataService = {
   async listFolderChildren(folderPath) {
     // List files in a folder under the drive root
     // folderPath examples: "cardinals/saisons", "carouges/archives"
-    const url = `https://graph.microsoft.com/v1.0/drives/${CONFIG.graphDriveId}/root:/${encodeURIComponent(folderPath)}:/children?$select=name,id,file,size`;
+    const encodedPath = folderPath.split('/').map(encodeURIComponent).join('/');
+    const url = `https://graph.microsoft.com/v1.0/drives/${CONFIG.graphDriveId}/root:/${encodedPath}:/children?$select=name,id,file,size`;
     try {
       const data = await this.graphGetJson(url);
       return (data.value || []).filter(item => item.file && item.name.endsWith('.xlsx'));
@@ -514,7 +515,19 @@ const dataService = {
     }
 
     this.showLoading('Finalisation...');
-    return { camp, selection, preCampB };
+    // Dédupliquer: même joueurId+annee+org → garder la ligne avec catégorie connue
+    const dedup = (arr) => {
+      const map = new Map();
+      arr.forEach(r => {
+        const key = `${r.joueurId}|${r.annee}|${r.organisationElite}`;
+        const existing = map.get(key);
+        if (!existing || existing.categorie === 'Inconnu') {
+          map.set(key, r);
+        }
+      });
+      return [...map.values()];
+    };
+    return { camp: dedup(camp), selection: dedup(selection), preCampB: dedup(preCampB) };
   },
 
   // --- FILENAME PARSER ---
@@ -839,7 +852,8 @@ function renderCampCategorie() {
     dataPrev: filterByOrgYear(state.data.camp, state.year - 1),
     level1Key: 'categorie', level2Key: 'associationPrimaire',
     level1Sort: 'categorie', level2Sort: 'association',
-    showDeltaPct: true
+    showDeltaPct: true,
+    showPreCampBLevel3: true
   });
 }
 
@@ -851,7 +865,8 @@ function renderCampAssociation() {
     data: filterByOrgYear(state.data.camp, state.year),
     dataPrev: filterByOrgYear(state.data.camp, state.year - 1),
     level1Key: 'associationPrimaire', level2Key: 'categorie',
-    level1Sort: 'association', level2Sort: 'categorie'
+    level1Sort: 'association', level2Sort: 'categorie',
+    showPreCampBLevel3: true
   });
 }
 
