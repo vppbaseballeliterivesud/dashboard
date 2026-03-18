@@ -372,12 +372,19 @@ const dataService = {
       }
     };
     this.msalInstance = new msal.PublicClientApplication(msalConfig);
-    await this.msalInstance.initialize();
+    // initialize() is required in MSAL 2.x but may fail silently
+    if (typeof this.msalInstance.initialize === 'function') {
+      await this.msalInstance.initialize();
+    }
 
     // Handle redirect promise (for redirect flow)
-    const response = await this.msalInstance.handleRedirectPromise();
-    if (response) {
-      this.account = response.account;
+    try {
+      const response = await this.msalInstance.handleRedirectPromise();
+      if (response) {
+        this.account = response.account;
+      }
+    } catch (e) {
+      console.warn('handleRedirectPromise error (ignoré):', e);
     }
   },
 
