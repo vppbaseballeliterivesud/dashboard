@@ -200,6 +200,9 @@ const CONFIG = {
 };
 
 const CATEGORIES_ORDER = ['9U', '11U', '13U', '15U', '18U', '21U'];
+function getCategories() {
+  return state.org === 'cardinals' ? CATEGORIES_ORDER.filter(c => c !== '21U') : CATEGORIES_ORDER;
+}
 
 const VIEWS = {
   'precamp-b':           { label: 'Précamp - Joueurs B',     forAll: false, onlyOrg: 'cardinals' },
@@ -667,7 +670,8 @@ function getOrgLabel() { return state.org === 'cardinals' ? 'Cardinals' : 'Carou
 
 function filterByOrgYear(collection, year) {
   const orgLabel = getOrgLabel();
-  return collection.filter(r => r.organisationElite === orgLabel && r.annee === year);
+  const excludeCats = state.org === 'cardinals' ? ['21U'] : [];
+  return collection.filter(r => r.organisationElite === orgLabel && r.annee === year && !excludeCats.includes(r.categorie));
 }
 
 function groupBy(arr, key) {
@@ -1058,7 +1062,7 @@ function renderValidationN1() {
   html += `<div style="margin-bottom:16px; display:flex; gap:12px; flex-wrap:wrap;">
     <select id="val-filter-cat" style="padding:6px 10px; border-radius:6px; border:1px solid #ddd; font-size:13px;">
       <option value="">Toutes les catégories</option>
-      ${CATEGORIES_ORDER.map(c => `<option value="${c}">${c}</option>`).join('')}
+      ${getCategories().map(c => `<option value="${c}">${c}</option>`).join('')}
     </select>
     <select id="val-filter-status" style="padding:6px 10px; border-radius:6px; border:1px solid #ddd; font-size:13px;">
       <option value="">Tous les statuts</option>
@@ -1122,7 +1126,7 @@ function renderMatrices() {
 function renderMatrix(title, data) {
   const byAssoc = groupBy(data, 'associationPrimaire');
   const assocs = sortedAssociations(byAssoc);
-  const cats = CATEGORIES_ORDER.filter(c => data.some(r => r.categorie === c));
+  const cats = getCategories().filter(c => data.some(r => r.categorie === c));
 
   let html = `<div class="matrix-section"><h3>${title}</h3>`;
   html += `<div class="table-container"><table class="matrix">
@@ -1213,7 +1217,7 @@ function renderCommonHeader() {
   campPrev.forEach(p => { catsPrev[p.categorie] = (catsPrev[p.categorie] || 0) + 1; });
 
   html += `<div class="cat-stat-grid">`;
-  CATEGORIES_ORDER.forEach(cat => {
+  getCategories().forEach(cat => {
     const curr = catsCurr[cat] || 0;
     const prev = catsPrev[cat] || 0;
     if (curr === 0 && prev === 0) return;
