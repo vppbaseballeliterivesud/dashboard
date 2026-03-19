@@ -1005,11 +1005,11 @@ function renderValidationN1() {
   const selPrevRaw = filterByOrgYear(state.data.selection, state.year - 1);
   // Exclure les joueurs trop âgés: Cardinals 18+, Carouges 21+
   const ageLimit = state.org === 'cardinals' ? 18 : 21;
-  const birthYearCutoff = state.year - ageLimit; // ex: 2026-18=2008 → né en 2007 ou avant = exclu
+  const birthYearCutoff = state.year - ageLimit; // ex: 2026-18=2008 → né en 2008 = 18 ans = éligible, 2007 = exclu
   const selPrev = selPrevRaw.filter(p => {
-    if (!p.dateNaissance) return true; // garder si pas de date
+    if (!p.dateNaissance) return true;
     const birthYear = parseInt(p.dateNaissance.split('-')[0]);
-    return birthYear > birthYearCutoff; // né après le cutoff = éligible
+    return birthYear >= birthYearCutoff; // né en 2008 ou après = éligible
   });
   const campCurr = filterByOrgYear(state.data.camp, state.year);
   const campIds = new Set(campCurr.map(r => r.joueurId));
