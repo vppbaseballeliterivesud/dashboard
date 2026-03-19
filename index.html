@@ -32,7 +32,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .header { background: var(--acc); color: #fff; padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; }
 .header-left { display: flex; align-items: center; gap: 16px; }
 .header h1 { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 900; letter-spacing: -.02em; }
-.header .org-badge { background: #e94560; padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; font-family: 'DM Mono', monospace; }
+.org-logo { height: 56px; width: auto; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 2px 4px rgba(0,0,0,.3)); }
 .header-right { display: flex; align-items: center; gap: 12px; }
 .header-right label { font-size: 13px; color: rgba(255,255,255,.85); }
 .year-select, .org-select { background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.35); border-radius: 8px; padding: 7px 14px; font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; }
@@ -136,8 +136,8 @@ table.matrix tr.total-row td { border-top: 2px solid var(--bd2); }
 <!-- ========== HEADER ========== -->
 <div class="header">
   <div class="header-left">
+    <img id="orgLogo" src="logo-cardinals.png" alt="Logo" class="org-logo">
     <h1>Baseball Élite Rive-Sud</h1>
-    <span class="org-badge" id="orgBadge">Cardinals</span>
   </div>
   <div class="header-right">
     <label>Organisation :</label>
@@ -1197,18 +1197,14 @@ async function init() {
   // Allow ?mock=1 to force mock data (useful for testing)
   if (params.has('mock')) CONFIG.useMockData = true;
 
-  document.getElementById('orgBadge').textContent = getOrgLabel();
-  document.getElementById('orgBadge').style.background =
-    state.org === 'cardinals' ? '#e94560' : '#2ecc71';
+  document.getElementById('orgLogo').src = `logo-${state.org}.png`;
 
   // Org selector
   const orgSelect = document.getElementById('orgSelect');
   orgSelect.value = state.org;
   orgSelect.addEventListener('change', () => {
     state.org = orgSelect.value;
-    document.getElementById('orgBadge').textContent = getOrgLabel();
-    document.getElementById('orgBadge').style.background =
-      state.org === 'cardinals' ? '#e94560' : '#2ecc71';
+    document.getElementById('orgLogo').src = `logo-${state.org}.png`;
     // Update URL without reload
     const url = new URL(window.location);
     url.searchParams.set('org', state.org);
