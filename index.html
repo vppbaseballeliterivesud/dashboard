@@ -186,8 +186,8 @@ const VIEWS = {
   'precamp-b':           { label: 'Précamp - Joueurs B',     forAll: false, onlyOrg: 'cardinals' },
   'camp-categorie':      { label: 'Camp – Catégorie',       forAll: true },
   'camp-association':    { label: 'Camp – Association',      forAll: true },
-  'selection-categorie': { label: 'Sélection – Catégorie',  forAll: true },
-  'selection-association':{ label: 'Sélection – Association', forAll: true },
+  'selection-categorie': { label: 'Sélections – Catégorie',  forAll: true },
+  'selection-association':{ label: 'Sélections – Association', forAll: true },
   'validation-n1':       { label: 'Camp - Réinscriptions', forAll: true },
   'matrices':            { label: 'Matrices',                forAll: true }
 };
@@ -976,7 +976,7 @@ function renderPreCampB() {
 function renderSelectionCategorie() {
   const container = document.getElementById('view-selection-categorie');
   renderDrillDown(container, {
-    title: `Sélection – Par catégorie (${getOrgLabel()})`,
+    title: `Sélections – Par catégorie (${getOrgLabel()})`,
     data: filterByOrgYear(state.data.selection, state.year),
     dataPrev: filterByOrgYear(state.data.selection, state.year - 1),
     level1Key: 'categorie', level2Key: 'associationPrimaire',
@@ -990,7 +990,7 @@ function renderSelectionCategorie() {
 function renderSelectionAssociation() {
   const container = document.getElementById('view-selection-association');
   renderDrillDown(container, {
-    title: `Sélection – Par association (${getOrgLabel()})`,
+    title: `Sélections – Par association (${getOrgLabel()})`,
     data: filterByOrgYear(state.data.selection, state.year),
     dataPrev: filterByOrgYear(state.data.selection, state.year - 1),
     level1Key: 'associationPrimaire', level2Key: 'categorie',
