@@ -101,6 +101,20 @@ table.matrix td.num { font-family: 'DM Mono', monospace; font-weight: 600; }
 table.matrix tr.total-row { background: var(--bg); font-weight: 700; }
 table.matrix tr.total-row td { border-top: 2px solid var(--bd2); }
 
+/* ========== COMMON HEADER STATS ========== */
+.common-kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
+.common-kpi-card { background: var(--bg2); border: 1px solid var(--bd); border-radius: 12px; padding: 16px 20px; box-shadow: 0 2px 6px rgba(21,101,192,.08); }
+.common-kpi-card .ck-label { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; font-weight: 600; }
+.common-kpi-card .ck-value { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700; line-height: 1.1; }
+.common-kpi-card .ck-delta { font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 600; margin-top: 4px; }
+.common-kpi-card .ck-ref { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--dim); margin-top: 2px; }
+.cat-stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 8px; }
+.cat-stat-card { background: var(--bg2); border: 1px solid var(--bd); border-radius: 10px; padding: 14px 16px; box-shadow: 0 1px 4px rgba(21,101,192,.07); }
+.cat-stat-name { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.cat-stat-total { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+.cat-stat-delta { font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 600; margin-top: 3px; }
+.cat-stat-ref { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--dim); margin-top: 2px; }
+
 /* ========== LOADING / ERROR ========== */
 .loading-overlay { position: fixed; inset: 0; background: rgba(245,247,250,.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
 .loading-overlay.hidden { display: none; }
@@ -155,8 +169,13 @@ table.matrix tr.total-row td { border-top: 2px solid var(--bd2); }
 <!-- ========== NAV ========== -->
 <div class="nav" id="navBar"></div>
 
+<!-- ========== COMMON HEADER (KPI + catégories) ========== -->
+<div class="main" style="padding-bottom:0;">
+  <div id="commonHeader"></div>
+</div>
+
 <!-- ========== MAIN ========== -->
-<div class="main">
+<div class="main" style="padding-top:0;">
   <div class="view" id="view-camp-categorie"></div>
   <div class="view" id="view-camp-association"></div>
   <div class="view" id="view-precamp-b"></div>
@@ -1156,6 +1175,65 @@ function buildNav() {
   });
 }
 
+function renderCommonHeader() {
+  const container = document.getElementById('commonHeader');
+  const campCurr = filterByOrgYear(state.data.camp, state.year);
+  const campPrev = filterByOrgYear(state.data.camp, state.year - 1);
+  const selCurr = filterByOrgYear(state.data.selection, state.year);
+  const selPrev = filterByOrgYear(state.data.selection, state.year - 1);
+
+  function deltaHtml(curr, prev) {
+    const delta = curr - prev;
+    const pct = prev > 0 ? ((delta / prev) * 100).toFixed(1) : '—';
+    const col = delta >= 0 ? 'var(--ok)' : 'var(--err)';
+    const sign = delta > 0 ? '+' : '';
+    const arrow = delta >= 0 ? '▲' : '▼';
+    return `<div class="ck-delta" style="color:${col}">${arrow} ${sign}${delta} ${prev > 0 ? '(' + sign + pct + '%)' : ''}</div>
+            <div class="ck-ref">${state.year - 1} : ${prev}</div>`;
+  }
+
+  // KPI totaux: Camp + Sélections
+  let html = `<div class="common-kpi-row">
+    <div class="common-kpi-card">
+      <div class="ck-label">Inscrits Camp ${state.year}</div>
+      <div class="ck-value">${campCurr.length}</div>
+      ${deltaHtml(campCurr.length, campPrev.length)}
+    </div>
+    <div class="common-kpi-card">
+      <div class="ck-label">Sélectionnés ${state.year}</div>
+      <div class="ck-value">${selCurr.length}</div>
+      ${deltaHtml(selCurr.length, selPrev.length)}
+    </div>
+  </div>`;
+
+  // Cards par catégorie (inscriptions camp)
+  const catsCurr = {};
+  const catsPrev = {};
+  campCurr.forEach(p => { catsCurr[p.categorie] = (catsCurr[p.categorie] || 0) + 1; });
+  campPrev.forEach(p => { catsPrev[p.categorie] = (catsPrev[p.categorie] || 0) + 1; });
+
+  html += `<div class="cat-stat-grid">`;
+  CATEGORIES_ORDER.forEach(cat => {
+    const curr = catsCurr[cat] || 0;
+    const prev = catsPrev[cat] || 0;
+    if (curr === 0 && prev === 0) return;
+    const delta = curr - prev;
+    const pct = prev > 0 ? ((delta / prev) * 100).toFixed(1) : '—';
+    const col = delta >= 0 ? 'var(--ok)' : 'var(--err)';
+    const sign = delta > 0 ? '+' : '';
+    const arrow = delta >= 0 ? '▲' : '▼';
+    html += `<div class="cat-stat-card">
+      <div class="cat-stat-name">${cat}</div>
+      <div class="cat-stat-total">${curr}</div>
+      <div class="cat-stat-delta" style="color:${col}">${arrow} ${sign}${delta} ${prev > 0 ? '(' + sign + pct + '%)' : ''}</div>
+      <div class="cat-stat-ref">${state.year - 1} : ${prev}</div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  container.innerHTML = html;
+}
+
 function navigate(viewId) {
   state.activeView = viewId;
   document.querySelectorAll('.nav-tab').forEach((tab, i) => {
@@ -1166,6 +1244,7 @@ function navigate(viewId) {
   const el = document.getElementById(`view-${viewId}`);
   if (el) {
     el.classList.add('active');
+    renderCommonHeader();
     renderView(viewId);
   }
 }
