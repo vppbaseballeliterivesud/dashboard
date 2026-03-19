@@ -183,12 +183,12 @@ const CONFIG = {
 const CATEGORIES_ORDER = ['9U', '11U', '13U', '15U', '18U', '21U'];
 
 const VIEWS = {
-  'precamp-b':           { label: 'Pré-Camp Joueurs B',     forAll: false, onlyOrg: 'cardinals' },
+  'precamp-b':           { label: 'Précamp - Joueurs B',     forAll: false, onlyOrg: 'cardinals' },
   'camp-categorie':      { label: 'Camp – Catégorie',       forAll: true },
   'camp-association':    { label: 'Camp – Association',      forAll: true },
   'selection-categorie': { label: 'Sélection – Catégorie',  forAll: true },
   'selection-association':{ label: 'Sélection – Association', forAll: true },
-  'validation-n1':       { label: 'Validation N-1 → Camp N', forAll: true },
+  'validation-n1':       { label: 'Camp - Réinscriptions', forAll: true },
   'matrices':            { label: 'Matrices',                forAll: true }
 };
 
@@ -889,7 +889,7 @@ function renderCampAssociation() {
   });
 }
 
-// --- Vue 3: Pré-Camp Joueurs B (Cardinals only) ---
+// --- Vue 3: Précamp - Joueurs B (Cardinals only) ---
 function renderPreCampB() {
   const container = document.getElementById('view-precamp-b');
   const preCampData = filterByOrgYear(state.data.preCampB, state.year);
@@ -902,7 +902,7 @@ function renderPreCampB() {
   const byCat = groupBy(preCampData, 'categorie');
   const sortedCats = sortedCategories(byCat);
 
-  let html = `<h2 class="view-title">Pré-Camp Joueurs B (${getOrgLabel()})</h2>`;
+  let html = `<h2 class="view-title">Précamp - Joueurs B (${getOrgLabel()})</h2>`;
   html += `<div class="table-container"><table>
     <thead><tr>
       <th>Catégorie</th>
@@ -999,7 +999,7 @@ function renderSelectionAssociation() {
   });
 }
 
-// --- Vue 6: Validation N-1 → Camp N ---
+// --- Vue 6: Camp - Réinscriptions ---
 function renderValidationN1() {
   const container = document.getElementById('view-validation-n1');
   const selPrevRaw = filterByOrgYear(state.data.selection, state.year - 1);
@@ -1020,7 +1020,7 @@ function renderValidationN1() {
   const pctRetention = total > 0 ? ((inscrits.length / total) * 100).toFixed(1) : '0';
 
   const excluded = selPrevRaw.length - selPrev.length;
-  let html = `<h2 class="view-title">Validation N-1 → Camp N (${getOrgLabel()})</h2>`;
+  let html = `<h2 class="view-title">Camp - Réinscriptions (${getOrgLabel()})</h2>`;
   if (excluded > 0) {
     html += `<div style="margin-bottom:12px;font-size:13px;color:#888;">
       ${excluded} joueur${excluded > 1 ? 's' : ''} exclu${excluded > 1 ? 's' : ''} (${ageLimit}+ ans au 31 déc. ${state.year})
